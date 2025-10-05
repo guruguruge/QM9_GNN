@@ -1,0 +1,84 @@
+graph TD
+    Start([入力: グラフデータ]) --> Input[ノード特徴 + 隣接リスト]
+    Input --> Init[初期表現 h^0<br/>37次元 one-hot]
+    
+    Init --> GIN_Block[GIN Layers<br/>詳細は図2]
+    
+    GIN_Block --> Readout_Block[Readout層<br/>詳細は図3]
+    
+    Readout_Block --> MLP_Block[予測ヘッド<br/>詳細は図4]
+    
+    MLP_Block --> Output([出力: クラス確率])
+    
+    style Start fill:#e1f5ff
+    style Output fill:#ffe1e1
+    style Init fill:#fff4e1
+    style GIN_Block fill:#e8f5e8
+    style Readout_Block fill:#f0e8f5
+    style MLP_Block fill:#ffe8f0
+
+---
+
+graph TD
+    G0[初期表現 h^0<br/>37次元 one-hot] --> G1_Start[GIN Layer 1]
+    
+    G1_Start --> G1_Agg[近傍集約<br/>Σ h_u from N v]
+    G1_Agg --> G1_Combine[1+ε × h_v^0 + Σ h_u^0]
+    G1_Combine --> G1_MLP[MLP 2層]
+    G1_MLP --> G1_Detail[Linear → BN → ReLU → Dropout<br/>Linear → BN → ReLU → Dropout]
+    G1_Detail --> G1_Out[更新表現 h^1]
+    
+    G1_Out --> G2_Start[GIN Layer 2]
+    G2_Start --> G2_Agg[近傍集約<br/>Σ h_u from N v]
+    G2_Agg --> G2_Combine[1+ε × h_v^1 + Σ h_u^1]
+    G2_Combine --> G2_MLP[MLP 2層]
+    G2_MLP --> G2_Out[更新表現 h^2]
+    
+    G2_Out --> Dots[...]
+    
+    Dots --> GK_Start[GIN Layer K]
+    GK_Start --> GK_Agg[近傍集約<br/>Σ h_u from N v]
+    GK_Agg --> GK_Combine[1+ε × h_v^K-1 + Σ h_u^K-1]
+    GK_Combine --> GK_MLP[MLP 2層]
+    GK_MLP --> GK_Out[最終表現 h^K]
+    
+    style G0 fill:#e1f5ff
+    style G1_Out fill:#e8f5e8
+    style G2_Out fill:#e8f5e8
+    style GK_Out fill:#ffe8f0
+    style G1_Detail fill:#f0e8f5
+
+---
+
+graph TD
+    Final[最終層ノード表現<br/>h_v^K for all v in G] --> ReadoutType{Readout種別}
+    
+    ReadoutType -->|Sum Pooling 推奨| Sum[h_graph = Σ h_v^K]
+    ReadoutType -->|Mean Pooling| Mean[h_graph = 1/V × Σ h_v^K]
+    
+    Sum --> Output[グラフ表現 h_graph<br/>shape: hidden_dim]
+    Mean --> Output
+    
+    style Final fill:#e1f5ff
+    style ReadoutType fill:#fff4e1
+    style Sum fill:#e8f5e8
+    style Mean fill:#e8f5e8
+    style Output fill:#ffe8f0
+
+---
+
+graph TD
+    M1[h_graph<br/>shape: hidden_dim] --> M2[Linear hidden_dim → hidden_dim]
+    M2 --> M3[ReLU]
+    M3 --> M4[Dropout p=0.5]
+    M4 --> M5[Linear hidden_dim → 2]
+    M5 --> M6[Softmax]
+    M6 --> M7([出力: クラス確率<br/>shape: 2])
+    
+    style M1 fill:#e1f5ff
+    style M2 fill:#e8f5e8
+    style M3 fill:#e8f5e8
+    style M4 fill:#e8f5e8
+    style M5 fill:#f0e8f5
+    style M6 fill:#f0e8f5
+    style M7 fill:#ffe1e1
